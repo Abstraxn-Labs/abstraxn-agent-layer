@@ -1,0 +1,39 @@
+# Dependencies and build output (reinstalled/rebuilt in the image)
+node_modules
+dist
+coverage
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Version control and editor
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs and OS junk
+*.log
+npm-debug.log*
+.DS_Store
+
+# Tests (excluded from production build)
+**/*.spec.ts
+
+# Docs (not needed for build)
+README.md
+*.md
+docs
+
+# Lint/format (not needed in the image)
+eslint.config.mjs
+.prettierrc
+
+# Docker metadata (not needed inside build context)
+Dockerfile*
+.dockerignore
