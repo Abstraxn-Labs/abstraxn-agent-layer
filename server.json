@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.sandeep-antier/abstraxn",
+  "title": "Abstraxn Agent Layer",
+  "description": "Abstraxn: public Web3 MCP server for read-only chain data and pay-per-call relays.",
+  "repository": {
+    "url": "https://github.com/Abstraxn-Labs/abstraxn-agent-layer",
+    "source": "github"
+  },
+  "version": "1.0.0-beta.1",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.abstraxn.com/mcp"
+    }
+  ]
+}
