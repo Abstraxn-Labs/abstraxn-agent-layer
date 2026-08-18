@@ -10,9 +10,12 @@ const EXPECTED_TOOL_NAMES = [
   'network.gas_info',
   'network.token_info',
   'network.token_price',
+  'network.prepare_transfer',
   'market.crypto',
   'web3.lookup',
   'travel.search',
+  'places.lookup',
+  'social.profile_lookup',
 ];
 
 function createConfig(): ConfigService {
@@ -52,7 +55,7 @@ describe('McpServerFactory (SDK-level integration)', () => {
     return newClient;
   }
 
-  it('lists exactly the 8 expected dot-notation tool names', async () => {
+  it('lists exactly the 11 expected dot-notation tool names', async () => {
     client = await connectClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(

@@ -35,6 +35,11 @@ const NATIVE_CURRENCY: Record<
   'skale-base-sepolia': { name: 'CREDIT', symbol: 'CREDIT', decimals: 18 },
 };
 
+/** Native currency symbol for a chain, e.g. `base` -> `ETH`, `monad` -> `MON`. */
+export function getNativeCurrencySymbol(chainSlug: string): string {
+  return NATIVE_CURRENCY[chainSlug]?.symbol ?? 'ETH';
+}
+
 export function createEvmPublicClient(rpcUrl: string, chainSlug: string) {
   const chainId = EVM_CHAIN_ID[chainSlug] ?? 1;
   const native = NATIVE_CURRENCY[chainSlug] ?? {

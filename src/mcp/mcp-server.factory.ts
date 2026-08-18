@@ -10,14 +10,18 @@ import { registerTokenPriceTool } from './tools/network-token-price.tool';
 import { registerMarketCryptoTool } from './tools/market-crypto.tool';
 import { registerWeb3LookupTool } from './tools/web3-lookup.tool';
 import { registerTravelSearchTool } from './tools/travel-search.tool';
+import { registerPlacesLookupTool } from './tools/places-lookup.tool';
+import { registerSocialProfileLookupTool } from './tools/social-profile-lookup.tool';
+import { registerPrepareTransferTool } from './tools/network-prepare-transfer.tool';
 
 const SERVER_NAME = 'abstraxn-web3-public-mcp';
 const SERVER_VERSION = '1.0.0';
 const SERVER_DESCRIPTION =
   'Abstraxn public Web3 MCP server — free read-only chain data (block height, gas, ' +
-  'transaction status, ERC-20 token info, spot prices) plus pay-per-call market data, ' +
-  "wallet/token/ENS lookups, and travel search, settled directly from the caller's own " +
-  'wallet via the x402 payment protocol. No API key or account required.';
+  'transaction status, ERC-20 token info, spot prices), unsigned transfer-transaction ' +
+  'building, plus pay-per-call market data, wallet/token/ENS lookups, travel search, ' +
+  'places/solar/aerial-view lookups, and social profile lookups, settled directly from the ' +
+  "caller's own wallet via the x402 payment protocol. No API key or account required.";
 
 /**
  * Builds one fresh `McpServer` per HTTP request (stateless mode — see `McpController`). There is
@@ -42,6 +46,7 @@ export class McpServerFactory {
     registerGasInfoTool(server, this.configService);
     registerTokenInfoTool(server, this.configService);
     registerTokenPriceTool(server);
+    registerPrepareTransferTool(server, this.configService);
     registerMarketCryptoTool(
       server,
       this.configService,
@@ -53,6 +58,16 @@ export class McpServerFactory {
       this.walletTrackingService,
     );
     registerTravelSearchTool(
+      server,
+      this.configService,
+      this.walletTrackingService,
+    );
+    registerPlacesLookupTool(
+      server,
+      this.configService,
+      this.walletTrackingService,
+    );
+    registerSocialProfileLookupTool(
       server,
       this.configService,
       this.walletTrackingService,

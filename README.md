@@ -5,8 +5,9 @@
 
 A free, public **[MCP](https://modelcontextprotocol.io) (Model Context Protocol) server** for
 Web3 data. Point any MCP client — Claude Desktop, Cursor, your own agent — at it and it can read
-live chain data (block height, gas, transaction status, ERC-20 info, spot prices) and, for a
-handful of pay-per-call tools, look up market data, wallets/tokens/ENS, and travel search.
+live chain data (block height, gas, transaction status, ERC-20 info, spot prices), build unsigned
+EVM/Solana transfer transactions, and, for a handful of pay-per-call tools, look up market data,
+wallets/tokens/ENS, travel search, places/solar/aerial-view data, and social-profile identity.
 
 **No API key, no account, no signup.** Free tools are open to anyone; paid tools are settled
 directly from the caller's own wallet via the [x402](https://www.x402.org) payment protocol —
@@ -37,7 +38,8 @@ git clone https://github.com/Abstraxn-Labs/abstraxn-agent-layer.git
 cd abstraxn-agent-layer
 npm install
 cp .env.example .env
-# Edit .env: Postgres connection + UPSTREAM_RELAY_BASE_URL (required for the 3 paid tools)
+# Edit .env: Postgres connection + UPSTREAM_RELAY_BASE_URL / ENRICHMENT_RELAY_BASE_URL
+# (each required for its own group of paid tools)
 npm run start:dev
 ```
 
@@ -72,12 +74,15 @@ Restart the client and the tools below become available to it — no further set
 | `network.gas_info` | No | Current gas price + EIP-1559 fee hints for an EVM chain. |
 | `network.token_info` | No | ERC-20 name / symbol / decimals / total supply. |
 | `network.token_price` | No | Spot price via CoinGecko (defaults to ETH/USD). |
+| `network.prepare_transfer` | No | Build an unsigned native/ERC-20/SPL transfer transaction from an explicit `from`/`to`/`amount`. Never signs or broadcasts. |
 | `market.crypto` | Yes | Crypto market-data lookups (CoinGecko-sourced), 6 actions. |
 | `web3.lookup` | Yes | Multi-chain wallet / token / ENS / tx-simulation lookups, 7 actions. |
 | `travel.search` | Yes | Flight and hotel search, 2 actions. |
+| `places.lookup` | Yes | Place / solar / aerial-view lookups, 11 actions. |
+| `social.profile_lookup` | Yes | Person / social-profile identity resolution for a batch of records. |
 
-Tools are namespaced by area (`network.*`, `market.*`, `web3.*`, `travel.*`) so an MCP client can
-browse them as a tree rather than a flat list.
+Tools are namespaced by area (`network.*`, `market.*`, `web3.*`, `travel.*`, `places.*`,
+`social.*`) so an MCP client can browse them as a tree rather than a flat list.
 
 **How paid tools work:** call one with no payment, and you get back a `paymentRequired` challenge
 (not an error). Your wallet client signs it and retries the same call with `paymentPayload` set —
@@ -119,10 +124,8 @@ marked **required**:
 | `PUBLIC_MCP_RATE_LIMIT_PER_MIN` / `_WINDOW_MS` | No | Global per-IP rate limit (default 30/min) |
 | `CHAIN_RPC_*` | No | Per-chain EVM RPC overrides — public defaults are used if unset (see `src/mcp/utils/chain-registry.util.ts`) |
 | `SOLANA_RPC_URL` / `SOLANA_DEVNET_RPC_URL` | No | Solana cluster RPC overrides |
-| `UPSTREAM_RELAY_BASE_URL` | **Yes** | Base URL for the upstream relay behind the 3 paid tools — no default is committed, so `market.crypto` / `web3.lookup` / `travel.search` fail until this is set |
-
-There is no auth-related variable — there's nothing to authenticate on a service with no
-accounts or API keys.
+| `UPSTREAM_RELAY_BASE_URL` | **Yes** | Base URL for the upstream relay behind `market.crypto` / `web3.lookup` / `travel.search` — no default is committed, so those 3 tools fail until this is set |
+| `ENRICHMENT_RELAY_BASE_URL` | **Yes** | Base URL for the upstream relay behind `places.lookup` / `social.profile_lookup` — a separate upstream from `UPSTREAM_RELAY_BASE_URL`, no default is committed |
 
 ## How it works
 
@@ -139,7 +142,9 @@ live in its own repo with one route and one fixed tool set, reviewable end to en
 
 **Stack:** Node.js 20+ · NestJS 11 · [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk)
 `^1.30.0` (official SDK) · PostgreSQL + TypeORM · [`@x402/core`](https://www.x402.org) ·
-`viem` (EVM) + raw JSON-RPC (Solana) · `helmet`, `@nestjs/throttler`
+`viem` (EVM) + raw JSON-RPC (Solana reads) · `@solana/web3.js` + `@solana/spl-token` (Solana
+transfer building) · `@skalenetwork/bite` (SKALE privacy-encrypted transfers) · `helmet`,
+`@nestjs/throttler`
 
 ## Database
 
