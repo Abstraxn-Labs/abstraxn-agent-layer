@@ -23,6 +23,10 @@ export type RelayCallResult =
  * upstream never appears in source, only in a deployment's own untracked `.env`
  * (`UPSTREAM_RELAY_BASE_URL`, see .env.example). Always server-side config, never a tool
  * argument — accepting a URL from the caller here would be an SSRF vector.
+ *
+ * Deliberately a *separate* variable from `ENRICHMENT_RELAY_BASE_URL` (places.lookup /
+ * social.profile_lookup) — that relays to a different upstream than this one, even though the
+ * request/response mechanics are identical.
  */
 export function resolveUpstreamRelayBaseUrl(
   configService: ConfigService,
@@ -35,6 +39,28 @@ export function resolveUpstreamRelayBaseUrl(
       'UPSTREAM_RELAY_BASE_URL is not set. This service ships with no default upstream — ' +
         "configure it in your deployment's own .env before calling market.crypto, web3.lookup, " +
         'or travel.search.',
+    );
+  }
+  return configured;
+}
+
+/**
+ * Base URL for the 2 payable enrichment relay tools (`places.lookup`, `social.profile_lookup`).
+ * Same no-default, no-fallback reasoning as `resolveUpstreamRelayBaseUrl` — kept as its own env
+ * var (`ENRICHMENT_RELAY_BASE_URL`) since these 2 tools relay to a different upstream than
+ * `UPSTREAM_RELAY_BASE_URL`'s 3 tools.
+ */
+export function resolveEnrichmentRelayBaseUrl(
+  configService: ConfigService,
+): string {
+  const configured = configService
+    .get<string>('ENRICHMENT_RELAY_BASE_URL', '')
+    .trim();
+  if (!configured) {
+    throw new Error(
+      'ENRICHMENT_RELAY_BASE_URL is not set. This service ships with no default upstream — ' +
+        "configure it in your deployment's own .env before calling places.lookup or " +
+        'social.profile_lookup.',
     );
   }
   return configured;
@@ -234,6 +260,35 @@ export async function callUpstreamRelayEndpointJson(
   const url = new URL(
     path,
     resolveUpstreamRelayBaseUrl(configService),
+  ).toString();
+  return doUpstreamRelayRequest(url, { method: 'POST', body }, options);
+}
+
+/** Relays a GET REST call to the enrichment upstream. See `doUpstreamRelayRequest` for shared behavior. */
+export async function callEnrichmentRelayEndpoint(
+  configService: ConfigService,
+  path: string,
+  params: Record<string, unknown>,
+  options: RelayPaymentOptions,
+): Promise<RelayCallResult> {
+  const url = buildUpstreamRelayUrl(
+    resolveEnrichmentRelayBaseUrl(configService),
+    path,
+    params,
+  );
+  return doUpstreamRelayRequest(url, { method: 'GET' }, options);
+}
+
+/** Relays a POST REST call with a JSON body to the enrichment upstream. See `doUpstreamRelayRequest` for shared behavior. */
+export async function callEnrichmentRelayEndpointJson(
+  configService: ConfigService,
+  path: string,
+  body: Record<string, unknown>,
+  options: RelayPaymentOptions,
+): Promise<RelayCallResult> {
+  const url = new URL(
+    path,
+    resolveEnrichmentRelayBaseUrl(configService),
   ).toString();
   return doUpstreamRelayRequest(url, { method: 'POST', body }, options);
 }

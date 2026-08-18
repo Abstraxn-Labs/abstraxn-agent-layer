@@ -1,7 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import {
+  callEnrichmentRelayEndpoint,
+  callEnrichmentRelayEndpointJson,
   callUpstreamRelayEndpoint,
   callUpstreamRelayEndpointJson,
+  resolveEnrichmentRelayBaseUrl,
   resolveUpstreamRelayBaseUrl,
 } from './x402-relay.util';
 
@@ -255,5 +258,120 @@ describe('callUpstreamRelayEndpointJson', () => {
     expect(init.method).toBe('POST');
     expect(init.headers['PAYMENT-SIGNATURE']).toBe('encoded-signature');
     expect(JSON.parse(init.body)).toEqual({ tokens: [] });
+  });
+});
+
+describe('resolveEnrichmentRelayBaseUrl', () => {
+  it('throws when ENRICHMENT_RELAY_BASE_URL is not configured', () => {
+    expect(() => resolveEnrichmentRelayBaseUrl(createConfig())).toThrow(
+      /ENRICHMENT_RELAY_BASE_URL is not set/,
+    );
+  });
+
+  it('honors an env override', () => {
+    expect(
+      resolveEnrichmentRelayBaseUrl(
+        createConfig({ ENRICHMENT_RELAY_BASE_URL: 'https://enrich.example' }),
+      ),
+    ).toBe('https://enrich.example');
+  });
+
+  it('is independent from UPSTREAM_RELAY_BASE_URL', () => {
+    const config = createConfig({
+      UPSTREAM_RELAY_BASE_URL: 'https://relay.example',
+    });
+    expect(() => resolveEnrichmentRelayBaseUrl(config)).toThrow(
+      /ENRICHMENT_RELAY_BASE_URL is not set/,
+    );
+  });
+});
+
+describe('callEnrichmentRelayEndpoint', () => {
+  const config = createConfig({
+    ENRICHMENT_RELAY_BASE_URL: 'https://enrich.example',
+  });
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.clearAllMocks();
+  });
+
+  it('dispatches a GET to the enrichment base URL', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: () => Promise.resolve({ places: [] }),
+    });
+    global.fetch = fetchMock;
+
+    const result = await callEnrichmentRelayEndpoint(
+      config,
+      '/api/places/text-search/full',
+      { textQuery: 'coffee' },
+      {},
+    );
+    expect(result).toEqual({ status: 'ok', result: { places: [] } });
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.origin).toBe('https://enrich.example');
+    expect(calledUrl.pathname).toBe('/api/places/text-search/full');
+  });
+
+  it('decodes a 402 PAYMENT-REQUIRED header into a paymentRequired result', async () => {
+    const challenge = { x402Version: 2, accepts: [] };
+    decodePaymentRequiredHeader.mockReturnValue(challenge);
+    const headers = new Headers({ 'PAYMENT-REQUIRED': 'encoded-challenge' });
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 402,
+      ok: false,
+      headers,
+      json: () => Promise.resolve({}),
+    });
+
+    const result = await callEnrichmentRelayEndpoint(
+      config,
+      '/api/places/text-search/full',
+      {},
+      {},
+    );
+    expect(result).toEqual({
+      status: 'paymentRequired',
+      paymentRequired: challenge,
+    });
+  });
+});
+
+describe('callEnrichmentRelayEndpointJson', () => {
+  const config = createConfig({
+    ENRICHMENT_RELAY_BASE_URL: 'https://enrich.example',
+  });
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.clearAllMocks();
+  });
+
+  it('POSTs a JSON body to the enrichment base URL', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      json: () => Promise.resolve({ matches: [] }),
+    });
+    global.fetch = fetchMock;
+
+    await callEnrichmentRelayEndpointJson(
+      config,
+      '/api/social/profile-lookup',
+      { records: [] },
+      {},
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(url as string).origin).toBe('https://enrich.example');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ records: [] });
   });
 });

@@ -35,6 +35,9 @@
     "@nestjs/swagger": "^11.4.6",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@skalenetwork/bite": "^0.8.1",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.4",
     "@x402/core": "^2.21.0",
     "express": "^5.2.1",
     "helmet": "^8.3.0",
@@ -77,6 +80,8 @@
     "collectCoverageFrom": ["**/*.(t|j)s"],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "transformIgnorePatterns": ["node_modules/(?!(@modelcontextprotocol)/)"]
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@modelcontextprotocol|@solana|uuid|rpc-websockets)/)"
+    ]
   }
 }
