@@ -5,9 +5,10 @@
 
 A free, public **[MCP](https://modelcontextprotocol.io) (Model Context Protocol) server** for
 Web3 data. Point any MCP client — Claude Desktop, Cursor, your own agent — at it and it can read
-live chain data (block height, gas, transaction status, ERC-20 info, spot prices), build unsigned
-EVM/Solana transfer transactions, and, for a handful of pay-per-call tools, look up market data,
-wallets/tokens/ENS, travel search, places/solar/aerial-view data, and social-profile identity.
+live chain data (block height, gas, transaction status, ERC-20 info, spot prices), look up
+weather forecasts, build unsigned EVM/Solana transfer transactions, and, for a handful of
+pay-per-call tools, look up market data, wallets/tokens/ENS, travel search, places/solar/aerial-view
+data, and social-profile identity.
 
 **No API key, no account, no signup.** Free tools are open to anyone; paid tools are settled
 directly from the caller's own wallet via the [x402](https://www.x402.org) payment protocol —
@@ -39,7 +40,7 @@ cd abstraxn-agent-layer
 npm install
 cp .env.example .env
 # Edit .env: Postgres connection + UPSTREAM_RELAY_BASE_URL / ENRICHMENT_RELAY_BASE_URL
-# (each required for its own group of paid tools)
+# (each required for its own group of paid tools) + WEATHERAPI_KEY (required for weather.forecast)
 npm run start:dev
 ```
 
@@ -75,6 +76,7 @@ Restart the client and the tools below become available to it — no further set
 | `network.token_info` | No | ERC-20 name / symbol / decimals / total supply. |
 | `network.token_price` | No | Spot price via CoinGecko (defaults to ETH/USD). |
 | `network.prepare_transfer` | No | Build an unsigned native/ERC-20/SPL transfer transaction from an explicit `from`/`to`/`amount`. Never signs or broadcasts. |
+| `weather.forecast` | No | Current conditions, forecast, astronomy, location search, historical, and marine weather lookups, 6 actions. |
 | `market.crypto` | Yes | Crypto market-data lookups (CoinGecko-sourced), 6 actions. |
 | `web3.lookup` | Yes | Multi-chain wallet / token / ENS / tx-simulation lookups, 7 actions. |
 | `travel.search` | Yes | Flight and hotel search, 2 actions. |
@@ -124,6 +126,8 @@ marked **required**:
 | `PUBLIC_MCP_RATE_LIMIT_PER_MIN` / `_WINDOW_MS` | No | Global per-IP rate limit (default 30/min) |
 | `CHAIN_RPC_*` | No | Per-chain EVM RPC overrides — public defaults are used if unset (see `src/mcp/utils/chain-registry.util.ts`) |
 | `SOLANA_RPC_URL` / `SOLANA_DEVNET_RPC_URL` | No | Solana cluster RPC overrides |
+| `WEATHERAPI_KEY` | **Yes** | Free API key for `weather.forecast` — get one at WeatherAPI.com's signup page (100K calls/month free tier, no paid features used). Without it, `weather.forecast` returns a clear error instead of failing the whole service. |
+| `WEATHERAPI_BASE_URL` | **Yes** | Upstream base URL for `weather.forecast` — no default is committed to source, so the tool fails cleanly until this is set (ships as `https://api.weatherapi.com/v1` in `.env.example`; override to point at a mock/self-hosted mirror for local testing). |
 | `UPSTREAM_RELAY_BASE_URL` | **Yes** | Base URL for the upstream relay behind `market.crypto` / `web3.lookup` / `travel.search` — no default is committed, so those 3 tools fail until this is set |
 | `ENRICHMENT_RELAY_BASE_URL` | **Yes** | Base URL for the upstream relay behind `places.lookup` / `social.profile_lookup` — a separate upstream from `UPSTREAM_RELAY_BASE_URL`, no default is committed |
 
@@ -168,7 +172,9 @@ Since anyone can call this service with no key, a few invariants matter:
 - **Rate limiting is global and IP-keyed** — the only lever available with no accounts. If you
   deploy behind a reverse proxy, set `app.set('trust proxy', ...)` in `main.ts`, or the limiter
   ends up rate-limiting the proxy instead of real callers.
-- **No secrets beyond the DB password**, which is env-only and never logged.
+- **No secrets beyond the DB password and `WEATHERAPI_KEY`**, both env-only and never logged —
+  `weather.forecast` builds its provider request URL with the key as a query param, but every
+  log line only ever carries the action name and error message, never the URL itself.
 - **CORS is wildcard** by design — nothing tenant-specific ever crosses an origin here.
 
 Found a security issue? See [CONTRIBUTING.md](CONTRIBUTING.md#reporting-bugs--security-issues)
